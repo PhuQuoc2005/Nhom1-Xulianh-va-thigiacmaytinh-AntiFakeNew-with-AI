@@ -1,4 +1,4 @@
-# Phân Tích & Phát Hiện Tin Giả (AI Fake News Detector)
+# Nhóm 1 - Xử Lý Ảnh Và Thị Giác Máy Tính - Anti Fake News Project
 
 Dự án này là một hệ thống Trí tuệ Nhân tạo giúp nhận diện thông tin sai lệch (Fake News) từ văn bản, hình ảnh, hoặc các liên kết bài báo (URL) được phát triển cho nhóm 6 người.
 

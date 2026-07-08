@@ -11,7 +11,7 @@ from src.text.search_engine import search_cross_check
 from src.inference.ai_engine import call_gemini_analysis
 from src.image.image_processor import analyze_real_fake_image
 
-st.set_page_config(page_title="Anti Fake News", page_icon="🕵️", layout="wide")
+st.set_page_config(page_title="Nhóm 1 - Xử Lý Ảnh Và Thị Giác Máy Tính - Anti Fake News Project", page_icon="🕵️", layout="wide")
 
 if "query_history" not in st.session_state:
     st.session_state.query_history = []

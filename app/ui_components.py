@@ -113,8 +113,8 @@ def load_custom_css():
     """, unsafe_allow_html=True)
 
 def render_header():
-    st.markdown("<h1>Anti Fake News</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='subtitle'>Bảo vệ bạn khỏi thông tin sai lệch bằng Trí tuệ Nhân tạo đỉnh cao</p>", unsafe_allow_html=True)
+    st.markdown("<h1>Anti Fake News Project</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='subtitle'>Thực hiện bởi: Nhóm 1 - Xử Lý Ảnh Và Thị Giác Máy Tính</p>", unsafe_allow_html=True)
 
 @st.dialog("✨ Kết Quả Phân Tích Bằng AI", width="large")
 def show_result_popup(result, analysis_type):
