@@ -90,15 +90,30 @@ with col_main:
     if st.button("🚀 Bắt Đầu Quét", type="primary"):
         if uploaded_file is not None:
             if "ELA" in image_scan_mode:
-                st.warning("🚧 Mô hình ELA-CNN hiện đang chờ được nạp dữ liệu (Dataset) để Huấn luyện. Tạm thời trả về kết quả phân tích ELA bằng mắt thường.")
-                res = {
-                    "fake_probability": 50,
-                    "reasons": [
-                        "Thuật toán ELA đã làm nổi bật các điểm ảnh (pixel) bị nén bất thường.", 
-                        "👉 HÃY NHÌN VÀO BỨC ẢNH ELA PHÍA TRÊN: Nếu có một vùng nào đó SÁNG RỰC lên khác biệt hoàn toàn so với xung quanh, đó chính là phần bị ghép/photoshop!"
-                    ],
-                    "sentiment_score": 0.0
-                }
+                st.info("Chế độ ELA: Máy tính sẽ tìm kiếm các vùng pixel bị nén bất thường do can thiệp bằng phần mềm chỉnh sửa ảnh (như Photoshop).")
+                with st.spinner("⏳ Đang tính toán Error Level Analysis và đẩy qua Mạng Nơ-ron (CNN)..."):
+                    from src.image.ela_processor import compute_ela
+                    ela_img = compute_ela(uploaded_file)
+                    
+                    if ela_img:
+                        from src.models.ela_cnn import predict_ela
+                        fake_prob = predict_ela(ela_img)
+                        
+                        if fake_prob is not None:
+                            res = {
+                                "fake_probability": fake_prob,
+                                "reasons": [
+                                    "Đã phân tích các điểm ảnh bằng Thuật toán ELA.",
+                                    "Mạng Nơ-ron Tích chập (CNN) được huấn luyện trên bộ dữ liệu MKLab Quốc tế đã phát hiện cấu trúc ảnh bất thường." if fake_prob > 50 else "Mạng Nơ-ron Tích chập (CNN) chưa tìm thấy dấu hiệu ảnh bị cắt ghép lộ liễu."
+                                ],
+                                "sentiment_score": 0.0
+                            }
+                        else:
+                            res = {
+                                "fake_probability": 0,
+                                "reasons": ["⚠️ Mô hình ELA CNN chưa được huấn luyện! Vui lòng chạy file train_ela_model.py."],
+                                "sentiment_score": 0.0
+                            }
             elif "OCR" in image_scan_mode:
                 with st.spinner("⏳ Đang sử dụng công nghệ EasyOCR để lột chữ tiếng Việt từ hình ảnh..."):
                     from src.image.ocr_processor import extract_text_from_image

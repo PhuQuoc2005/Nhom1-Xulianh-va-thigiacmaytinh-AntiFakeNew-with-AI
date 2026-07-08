@@ -36,3 +36,33 @@ class ELACNN(nn.Module):
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
+
+def predict_ela(ela_img_pil):
+    """
+    Sử dụng ELA CNN đã train để dự đoán.
+    Trả về xác suất % là ảnh Fake (bị cắt ghép).
+    """
+    import os
+    from torchvision import transforms
+    
+    model_path = os.path.join(os.path.dirname(__file__), "weights", "ela_cnn.pth")
+    if not os.path.exists(model_path):
+        return None
+
+    model = ELACNN()
+    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu'), weights_only=True))
+    model.eval()
+
+    transform = transforms.Compose([
+        transforms.Resize((128, 128)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    ])
+
+    input_tensor = transform(ela_img_pil).unsqueeze(0)
+    with torch.no_grad():
+        output = model(input_tensor)
+        probs = torch.nn.functional.softmax(output, dim=1)
+        fake_prob = probs[0][1].item() * 100
+    
+    return fake_prob
