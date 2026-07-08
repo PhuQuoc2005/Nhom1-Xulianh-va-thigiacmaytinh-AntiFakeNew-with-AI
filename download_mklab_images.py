@@ -21,7 +21,7 @@ def download_images():
         
     real_count = 0
     fake_count = 0
-    max_per_class = 20 # Tải 20 ảnh mỗi loại để Demo cho nhanh (do nhiều link từ 2015 đã chết)
+    max_per_class = 200 # Tải tối đa 200 ảnh mỗi loại (Càng nhiều mô hình càng thông minh)
     
     # Bỏ qua dòng header đầu tiên
     for line in lines[1:]:
