@@ -57,11 +57,15 @@ with col_main:
     st.write("") 
     
     input_text = st.text_area(
-        "Văn bản hoặc Link bài báo:", 
+        "", 
         height=160, 
         placeholder="Nhập nội dung văn bản hoặc dán đường dẫn (VD: https://vnexpress.net/...) vào đây...",
         label_visibility="collapsed"
     )
+    
+    text_scan_mode = "Gemini AI"
+    if input_text.strip():
+        text_scan_mode = st.radio("Chọn phương pháp phân tích văn bản:", ["Gemini AI (Phân tích ngữ cảnh sâu)", "Mô hình Học máy (TF-IDF + Random Forest)"], horizontal=True)
     
     uploaded_file = st.file_uploader("Hoặc tải lên một hình ảnh:", type=["jpg", "png", "jpeg", "webp"])
     
@@ -108,10 +112,26 @@ with col_main:
                 
         elif input_text.strip():
             is_url = input_text.strip().startswith("http://") or input_text.strip().startswith("https://")
-            loading_text = "⏳ Đang truy xuất URL, bóc tách dữ liệu và cho AI suy luận..." if is_url else "⏳ AI đang tìm kiếm đối chiếu sự thật trên mạng..."
             
-            with st.spinner(loading_text):
-                res, snippet = analyze_real_fake_news(input_text, is_url=is_url, custom_api_key=custom_api_key)
+            if "TF-IDF" in text_scan_mode:
+                if is_url:
+                    st.error("❌ Mô hình TF-IDF Cổ điển chỉ hỗ trợ phân tích đoạn văn bản trực tiếp. Vui lòng copy nội dung bài báo dán vào đây, hoặc chuyển sang dùng Gemini AI để đọc Link!")
+                else:
+                    with st.spinner("⏳ Mô hình Học máy đang tính toán tần suất từ vựng (TF-IDF)..."):
+                        from src.models.text_ml_model import predict_text
+                        res = predict_text(input_text.strip())
+                    
+                    display_results(res, "Bài Viết (Học máy)")
+                    
+                    prob = res.get("fake_probability", 50)
+                    if prob < 30:
+                        st.balloons()
+                    add_to_history("Văn Bản (TF-IDF)", "Đoạn văn", prob)
+            else:
+                loading_text = "⏳ Đang truy xuất URL, bóc tách dữ liệu và cho AI suy luận..." if is_url else "⏳ AI đang tìm kiếm đối chiếu sự thật trên mạng..."
+                
+                with st.spinner(loading_text):
+                    res, snippet = analyze_real_fake_news(input_text, is_url=is_url, custom_api_key=custom_api_key)
                 
             display_results(res, "Đường dẫn URL" if is_url else "Văn Bản")
             
