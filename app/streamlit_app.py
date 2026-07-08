@@ -10,6 +10,7 @@ from src.text.web_scraper import extract_url_content
 from src.text.search_engine import search_cross_check
 from src.inference.ai_engine import call_gemini_analysis
 from src.image.image_processor import analyze_real_fake_image
+from src.image.ela_processor import compute_ela
 
 st.set_page_config(page_title="Nhóm 1 - Xử Lý Ảnh Và Thị Giác Máy Tính - Anti Fake News Project", page_icon="🕵️", layout="wide")
 
@@ -64,13 +65,37 @@ with col_main:
     
     uploaded_file = st.file_uploader("Hoặc tải lên một hình ảnh:", type=["jpg", "png", "jpeg", "webp"])
     
+    image_scan_mode = "Gemini AI"
     if uploaded_file is not None:
-        st.image(uploaded_file, caption="Bản xem trước hình ảnh", use_container_width=True)
+        image_scan_mode = st.radio("Chọn phương pháp phân tích ảnh:", ["Gemini AI (Chuyên Sâu)", "Thuật toán ELA (Computer Vision)"], horizontal=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.image(uploaded_file, caption="Ảnh gốc", use_container_width=True)
+        with col2:
+            if "ELA" in image_scan_mode:
+                with st.spinner("Đang soi lỗi Pixel bằng thuật toán ELA..."):
+                    ela_img = compute_ela(uploaded_file)
+                    if ela_img:
+                        st.image(ela_img, caption="Ảnh ELA (Vệt sáng = Bị chỉnh sửa)", use_container_width=True)
+            else:
+                st.info("Chế độ AI: Máy tính sẽ tự động đọc cấu trúc ngầm của bức ảnh.")
     
-    if st.button("🚀 Bắt Đầu Quét AI", type="primary"):
+    if st.button("🚀 Bắt Đầu Quét", type="primary"):
         if uploaded_file is not None:
-            with st.spinner("⏳ AI đang phân tích cấu trúc điểm ảnh... Vui lòng đợi trong giây lát!"):
-                res = analyze_real_fake_image(uploaded_file, custom_api_key=custom_api_key)
+            if "ELA" in image_scan_mode:
+                st.warning("🚧 Mô hình ELA-CNN hiện đang chờ được nạp dữ liệu (Dataset) để Huấn luyện. Tạm thời trả về kết quả phân tích ELA bằng mắt thường.")
+                res = {
+                    "fake_probability": 50,
+                    "reasons": [
+                        "Thuật toán ELA đã làm nổi bật các điểm ảnh (pixel) bị nén bất thường.", 
+                        "👉 HÃY NHÌN VÀO BỨC ẢNH ELA PHÍA TRÊN: Nếu có một vùng nào đó SÁNG RỰC lên khác biệt hoàn toàn so với xung quanh, đó chính là phần bị ghép/photoshop!"
+                    ],
+                    "sentiment_score": 0.0
+                }
+            else:
+                with st.spinner("⏳ AI đang phân tích cấu trúc điểm ảnh... Vui lòng đợi trong giây lát!"):
+                    res = analyze_real_fake_image(uploaded_file, custom_api_key=custom_api_key)
                 
             display_results(res, "Hình Ảnh")
             
