@@ -71,7 +71,7 @@ with col_main:
     
     image_scan_mode = "Gemini AI"
     if uploaded_file is not None:
-        image_scan_mode = st.radio("Chọn phương pháp phân tích ảnh:", ["Gemini AI (Chuyên Sâu)", "Thuật toán ELA (Computer Vision)"], horizontal=True)
+        image_scan_mode = st.radio("Chọn phương pháp phân tích ảnh:", ["Gemini AI (Chuyên Sâu)", "Thuật toán ELA (Computer Vision)", "Đọc chữ trong ảnh (OCR + Máy học)"], horizontal=True)
         
         col1, col2 = st.columns(2)
         with col1:
@@ -82,6 +82,8 @@ with col_main:
                     ela_img = compute_ela(uploaded_file)
                     if ela_img:
                         st.image(ela_img, caption="Ảnh ELA (Vệt sáng = Bị chỉnh sửa)", use_container_width=True)
+            elif "OCR" in image_scan_mode:
+                st.info("Chế độ OCR: Máy tính sẽ tự động đọc chữ (Text) bên trong bức ảnh của bạn mà không cần mạng Internet.")
             else:
                 st.info("Chế độ AI: Máy tính sẽ tự động đọc cấu trúc ngầm của bức ảnh.")
     
@@ -97,6 +99,22 @@ with col_main:
                     ],
                     "sentiment_score": 0.0
                 }
+            elif "OCR" in image_scan_mode:
+                with st.spinner("⏳ Đang sử dụng công nghệ EasyOCR để lột chữ tiếng Việt từ hình ảnh..."):
+                    from src.image.ocr_processor import extract_text_from_image
+                    extracted_text = extract_text_from_image(uploaded_file)
+                
+                if not extracted_text.strip():
+                    res = {
+                        "fake_probability": 0,
+                        "reasons": ["⚠️ Không tìm thấy chữ viết rõ ràng nào trong bức ảnh này!", "Công nghệ OCR yêu cầu hình ảnh phải chứa văn bản (Ví dụ: ảnh chụp màn hình bài báo, status Facebook)."],
+                        "sentiment_score": 0.0
+                    }
+                else:
+                    with st.spinner("⏳ Đang đưa chữ vào Mô hình Học máy tự train (TF-IDF)..."):
+                        from src.models.text_ml_model import predict_text
+                        res = predict_text(extracted_text)
+                        res["reasons"].insert(0, f"**Văn bản OCR đọc được từ ảnh:**\n\n> *{extracted_text}*")
             else:
                 with st.spinner("⏳ AI đang phân tích cấu trúc điểm ảnh... Vui lòng đợi trong giây lát!"):
                     res = analyze_real_fake_image(uploaded_file, custom_api_key=custom_api_key)
