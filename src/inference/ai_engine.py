@@ -22,6 +22,44 @@ def init_model(api_key):
 # Khởi tạo lần đầu
 init_model(DEFAULT_API_KEY)
 
+def fallback_heuristic_scan(prompt, image=None):
+    if image is not None:
+        return {
+            "fake_probability": 50,
+            "reasons": ["⚠️ LỖI QUÁ TẢI (RATE LIMIT): API Google đã đạt giới hạn.", "Không thể quét hình ảnh bằng thuật toán thủ công (chỉ áp dụng cho văn bản). Vui lòng thêm API Key riêng."],
+            "sentiment_score": 0.0
+        }
+        
+    fake_keywords = ["tin giả", "không đúng sự thật", "bác bỏ", "sai sự thật", "lừa đảo", "chưa được kiểm chứng", "đính chính", "tin đồn thất thiệt"]
+    real_keywords = ["xác nhận", "công bố chính thức", "sự thật là", "đã bắt giữ", "đúng sự thật"]
+    
+    prompt_lower = prompt.lower()
+    score = 50
+    reasons = ["⚠️ CHẾ ĐỘ QUÉT THỦ CÔNG (Do AI quá tải):"]
+    
+    found_fake = False
+    for kw in fake_keywords:
+        if kw in prompt_lower:
+            score += 15
+            reasons.append(f"- Phát hiện từ khóa cảnh báo rủi ro: '{kw}'")
+            found_fake = True
+            
+    for kw in real_keywords:
+        if kw in prompt_lower:
+            score -= 10
+            reasons.append(f"- Phát hiện từ khóa đáng tin cậy: '{kw}'")
+            
+    if not found_fake:
+        reasons.append("- Không tìm thấy từ khóa cảnh báo rủi ro cao nào trong kết quả tra cứu.")
+        
+    score = max(5, min(95, score))
+    
+    return {
+        "fake_probability": score,
+        "reasons": reasons,
+        "sentiment_score": 0.0
+    }
+
 def call_gemini_analysis(prompt, image=None, custom_api_key=None):
     global current_api_key
     
@@ -73,18 +111,6 @@ def call_gemini_analysis(prompt, image=None, custom_api_key=None):
                     time.sleep(wait_time)
                     continue
                 else:
-                    return {
-                        "fake_probability": 50,
-                        "reasons": [
-                            "⚠️ LỖI QUÁ TẢI (RATE LIMIT): Tài khoản API Google Gemini đã đạt giới hạn.",
-                            "Hệ thống đã tự động thử lại nhiều lần nhưng Google vẫn từ chối.",
-                            "Vui lòng dùng tính năng nhập API Key riêng ở thanh công cụ bên trái hoặc chờ 1 phút nhé!"
-                        ],
-                        "sentiment_score": 0.0
-                    }
+                    return fallback_heuristic_scan(prompt, image)
                 
-            return {
-                "fake_probability": 50,
-                "reasons": [f"Lỗi hệ thống khi gọi AI Gemini: {error_msg}"],
-                "sentiment_score": 0.0
-            }
+            return fallback_heuristic_scan(prompt, image)
