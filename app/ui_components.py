@@ -125,15 +125,15 @@ def show_result_popup(result, analysis_type):
     col1, col2 = st.columns([1, 1.3])
     with col1:
         st.markdown("<p style='color: #cbd5e1; font-weight: 600; margin-bottom: 0px;'>Nguy cơ giả mạo:</p>", unsafe_allow_html=True)
-        if prob > 70:
+        if prob > 50:
             st.markdown(f"<span class='score-high'>{prob}%</span>", unsafe_allow_html=True)
-            st.error("🚨 KHẢ NĂNG CAO LÀ TIN GIẢ / SAI LỆCH")
-        elif prob > 40:
+            st.error("🚨 KHẢ NĂNG CAO LÀ GIẢ MẠO / CẮT GHÉP")
+        elif prob == 50:
             st.markdown(f"<span class='score-mid'>{prob}%</span>", unsafe_allow_html=True)
             st.warning("⚠️ CẦN KIỂM CHỨNG THÊM")
         else:
             st.markdown(f"<span class='score-low'>{prob}%</span>", unsafe_allow_html=True)
-            st.success("✅ THÔNG TIN ĐÁNG TIN CẬY")
+            st.success("✅ NỘI DUNG ĐÁNG TIN CẬY")
             
         st.progress(prob / 100.0)
         
@@ -170,10 +170,10 @@ def render_sidebar(history):
                 prob = item["prob"]
                 
                 # Determine color based on probability
-                if prob > 70:
+                if prob > 50:
                     color = "#ef4444" # Red
                     icon = "🚨"
-                elif prob > 40:
+                elif prob == 50:
                     color = "#f59e0b" # Yellow
                     icon = "⚠️"
                 else:

@@ -89,7 +89,7 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     
-    epochs = 5
+    epochs = 30 # Tăng từ 5 lên 30 để AI cày cuốc cho đến khi thuộc lòng 200 ảnh
     print("🚀 Bắt đầu chạy Vòng lặp Học Máy (Epochs)...")
     for epoch in range(epochs):
         running_loss = 0.0
