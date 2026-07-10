@@ -11,6 +11,8 @@ sys.path.append(os.path.dirname(__file__))
 from src.models.ela_cnn import ELACNN
 from src.image.ela_processor import compute_ela
 from PIL import Image
+import random
+from io import BytesIO
 
 class ELADataset(torch.utils.data.Dataset):
     def __init__(self, image_paths, labels, transform=None):
@@ -23,8 +25,22 @@ class ELADataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         img_path = self.image_paths[idx]
-        # Chạy thuật toán ELA ngay trong lúc đọc data
-        ela_img = compute_ela(img_path)
+        
+        # 🎭 Data Augmentation: Mô phỏng nén Facebook/Zalo
+        # Nếu random > 0.3, ta cố tình ép nén ảnh gốc xuống chất lượng 30-60
+        # để bắt AI phải tinh mắt tìm ra các lỗi siêu mờ
+        if random.random() > 0.3:
+            try:
+                img = Image.open(img_path).convert('RGB')
+                buffer = BytesIO()
+                img.save(buffer, format="JPEG", quality=random.randint(30, 60))
+                buffer.seek(0)
+                ela_img = compute_ela(buffer)
+            except:
+                ela_img = compute_ela(img_path)
+        else:
+            # Chạy thuật toán ELA trên ảnh gốc
+            ela_img = compute_ela(img_path)
         if ela_img is None:
             # Nếu lỗi, fallback về ảnh đen
             ela_img = Image.new('RGB', (128, 128), color='black')

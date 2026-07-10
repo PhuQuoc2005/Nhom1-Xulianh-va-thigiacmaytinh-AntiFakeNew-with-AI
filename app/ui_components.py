@@ -116,8 +116,8 @@ def render_header():
     st.markdown("<h1>Anti Fake News Project</h1>", unsafe_allow_html=True)
     st.markdown("<p class='subtitle'>Thực hiện bởi: Nhóm 1 - Xử Lý Ảnh Và Thị Giác Máy Tính</p>", unsafe_allow_html=True)
 
-@st.dialog("✨ Kết Quả Phân Tích Bằng AI", width="large")
-def show_result_popup(result, analysis_type):
+@st.dialog("✨ Kết Quả Phân Tích", width="large")
+def show_result_popup(result, analysis_type, is_offline=False):
     prob = result.get("fake_probability", 50)
     
     st.markdown(f"<h3 style='color: #cbd5e1; font-weight: 500; font-size: 1.2rem; margin-bottom: 2rem;'>Khảo sát đối tượng: <span style='color: #f8fafc; font-weight: 700;'>{analysis_type}</span></h3>", unsafe_allow_html=True)
@@ -138,7 +138,10 @@ def show_result_popup(result, analysis_type):
         st.progress(prob / 100.0)
         
     with col2:
-        st.markdown("<h4 style='color: #f8fafc; font-weight: 700; margin-bottom: 1rem;'>📋 Phân Tích Logic Bằng Gemini AI:</h4>", unsafe_allow_html=True)
+        if is_offline:
+            st.markdown("<h4 style='color: #f8fafc; font-weight: 700; margin-bottom: 1rem;'>⚙️ Phân Tích Bằng Trí Tuệ Nhân Tạo (Hệ thống Cục bộ - CNN & NLP):</h4>", unsafe_allow_html=True)
+        else:
+            st.markdown("<h4 style='color: #f8fafc; font-weight: 700; margin-bottom: 1rem;'>📋 Phân Tích Logic Bằng Siêu AI (Gemini Cloud):</h4>", unsafe_allow_html=True)
         for r in result.get("reasons", []):
             st.markdown(f"<p style='color: #94a3b8; line-height: 1.7; font-size: 1.05rem;'>• {r}</p>", unsafe_allow_html=True)
             
@@ -153,8 +156,8 @@ def show_result_popup(result, analysis_type):
     else:
         st.info(f"Văn phong Trung lập & Khách quan (Điểm: {sentiment})")
 
-def display_results(result, analysis_type):
-    show_result_popup(result, analysis_type)
+def display_results(result, analysis_type, is_offline=False):
+    show_result_popup(result, analysis_type, is_offline)
 
 def render_sidebar(history):
     with st.sidebar:

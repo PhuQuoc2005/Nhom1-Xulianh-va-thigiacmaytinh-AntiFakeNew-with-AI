@@ -12,7 +12,7 @@ def init_model(api_key):
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(
-            'gemini-2.5-flash',
+            'gemini-3.1-flash-lite',
             generation_config={"response_mime_type": "application/json"}
         )
         current_api_key = api_key
@@ -22,11 +22,11 @@ def init_model(api_key):
 # Khởi tạo lần đầu
 init_model(DEFAULT_API_KEY)
 
-def fallback_heuristic_scan(prompt, image=None):
+def fallback_heuristic_scan(prompt, image=None, error_msg="API Google đã đạt giới hạn."):
     if image is not None:
         return {
             "fake_probability": 50,
-            "reasons": ["⚠️ LỖI QUÁ TẢI (RATE LIMIT): API Google đã đạt giới hạn.", "Không thể quét hình ảnh bằng thuật toán thủ công (chỉ áp dụng cho văn bản). Vui lòng thêm API Key riêng."],
+            "reasons": [f"⚠️ LỖI API: {error_msg}", "Không thể quét hình ảnh bằng thuật toán thủ công. Vui lòng kiểm tra lại API Key hoặc tên Model."],
             "sentiment_score": 0.0
         }
         
@@ -111,6 +111,6 @@ def call_gemini_analysis(prompt, image=None, custom_api_key=None):
                     time.sleep(wait_time)
                     continue
                 else:
-                    return fallback_heuristic_scan(prompt, image)
+                    return fallback_heuristic_scan(prompt, image, error_msg=error_msg)
                 
-            return fallback_heuristic_scan(prompt, image)
+            return fallback_heuristic_scan(prompt, image, error_msg=error_msg)

@@ -14,7 +14,8 @@ def compute_ela(image_path_or_file, quality=90):
         original.save(temp_filename, 'JPEG', quality=quality)
         
         # Mở ảnh vừa nén
-        compressed = Image.open(temp_filename)
+        with Image.open(temp_filename) as temp_img:
+            compressed = temp_img.convert('RGB')
         
         # Tính toán độ chênh lệch (Error) giữa ảnh gốc và ảnh nén
         ela_image = ImageChops.difference(original, compressed)
@@ -34,5 +35,5 @@ def compute_ela(image_path_or_file, quality=90):
             
         return ela_image
     except Exception as e:
-        print(f"Lỗi khi xử lý ELA: {e}")
+        print(f"Error processing ELA: {e}")
         return None

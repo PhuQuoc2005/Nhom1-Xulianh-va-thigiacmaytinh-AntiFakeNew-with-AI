@@ -79,6 +79,7 @@ with col_main:
         with col2:
             if "ELA" in image_scan_mode:
                 with st.spinner("Đang soi lỗi Pixel bằng thuật toán ELA..."):
+                    uploaded_file.seek(0)
                     ela_img = compute_ela(uploaded_file)
                     if ela_img:
                         st.image(ela_img, caption="Ảnh ELA (Vệt sáng = Bị chỉnh sửa)", use_container_width=True)
@@ -91,6 +92,7 @@ with col_main:
                 st.info("Chế độ ELA: Máy tính sẽ tìm kiếm các vùng pixel bị nén bất thường do can thiệp bằng phần mềm chỉnh sửa ảnh (như Photoshop).")
                 with st.spinner("⏳ Đang tính toán Error Level Analysis và đẩy qua Mạng Nơ-ron (CNN)..."):
                     from src.image.ela_processor import compute_ela
+                    uploaded_file.seek(0)
                     ela_img = compute_ela(uploaded_file)
                     
                     if ela_img:
@@ -98,12 +100,47 @@ with col_main:
                         fake_prob = predict_ela(ela_img)
                         
                         if fake_prob is not None:
+                            # Tích hợp OCR và NLP Offline
+                            from src.image.ocr_processor import extract_text_from_image
+                            from src.text.nlp_processor import predict_text_fake_news
+                            
+                            extracted_text = extract_text_from_image(uploaded_file)
+                            
+                            if extracted_text and extracted_text.startswith("ERROR:"):
+                                st.error(f"⚠️ Lỗi cấu hình Tesseract OCR: {extracted_text.replace('ERROR:', '').strip()}\n\nVui lòng kiểm tra lại xem Tesseract đã được cài đặt đúng đường dẫn chưa!")
+                                extracted_text = "" # Xóa text lỗi để tiếp tục luồng bình thường
+                            
+                            if extracted_text and len(extracted_text.strip()) > 5:
+                                text_length = len(extracted_text.strip())
+                                st.info(f"📝 Đã bóc tách được văn bản (OCR) - Độ dài {text_length} ký tự:\n{extracted_text[:100]}...")
+                                fake_prob_nlp = predict_text_fake_news(extracted_text)
+                                
+                                # Cân bằng trọng số động (Dynamic Weighting)
+                                if text_length > 30:
+                                    # Phát hiện nhiều chữ -> Ảnh màn hình web/báo chí
+                                    st.warning("🔄 Tự động kích hoạt Cân bằng Trọng số Động (Dynamic Weighting): Hệ thống dồn 80% trọng số vào thuật toán Ngôn ngữ (NLP) vì phát hiện đây là ảnh chụp màn hình có chứa chữ (tránh báo động giả từ thanh Menu giao diện).")
+                                    final_prob = (fake_prob * 0.2) + (fake_prob_nlp * 0.8)
+                                else:
+                                    # Ít chữ -> Ảnh tự nhiên
+                                    final_prob = (fake_prob * 0.6) + (fake_prob_nlp * 0.4)
+                                    
+                                reasons = [
+                                    "Đã phân tích cấu trúc điểm ảnh bằng Thuật toán CNN-ELA (Ngoại tuyến).",
+                                    f"Mạng Nơ-ron (CNN) chấm {round(fake_prob, 2)}% xác suất Pixel bị đứt gãy/cắt ghép.",
+                                    f"Mô hình Ngôn ngữ (NLP) chấm {round(fake_prob_nlp, 2)}% xác suất Nội dung là tin giả mạo."
+                                ]
+                            else:
+                                final_prob = fake_prob
+                                reasons = [
+                                    "Đã phân tích các điểm ảnh bằng Mạng Nơ-ron CNN-ELA (Ngoại tuyến).",
+                                    "Mạng Nơ-ron Tích chập (CNN) phát hiện bất thường." if fake_prob > 50 else "CNN chưa tìm thấy dấu vết cắt ghép lộ liễu.",
+                                    "Tesseract OCR không tìm thấy văn bản hợp lệ trong bức ảnh."
+                                ]
+                                
+                                
                             res = {
-                                "fake_probability": fake_prob,
-                                "reasons": [
-                                    "Đã phân tích các điểm ảnh bằng Thuật toán ELA.",
-                                    "Mạng Nơ-ron Tích chập (CNN) được huấn luyện trên bộ dữ liệu MKLab Quốc tế đã phát hiện cấu trúc ảnh bất thường." if fake_prob > 50 else "Mạng Nơ-ron Tích chập (CNN) chưa tìm thấy dấu hiệu ảnh bị cắt ghép lộ liễu."
-                                ],
+                                "fake_probability": round(final_prob, 2),
+                                "reasons": reasons,
                                 "sentiment_score": 0.0
                             }
                         else:
@@ -112,11 +149,17 @@ with col_main:
                                 "reasons": ["⚠️ Mô hình ELA CNN chưa được huấn luyện! Vui lòng chạy file train_ela_model.py."],
                                 "sentiment_score": 0.0
                             }
+                    else:
+                        res = {
+                            "fake_probability": 0,
+                            "reasons": ["⚠️ Không thể phân tích ELA cho bức ảnh này (định dạng không được hỗ trợ hoặc file bị lỗi)."],
+                            "sentiment_score": 0.0
+                        }
             else:
                 with st.spinner("⏳ AI đang phân tích cấu trúc điểm ảnh... Vui lòng đợi trong giây lát!"):
                     res = analyze_real_fake_image(uploaded_file, custom_api_key=custom_api_key)
                 
-            display_results(res, "Hình Ảnh")
+            display_results(res, "Hình Ảnh", is_offline=("ELA" in image_scan_mode))
             
             prob = res.get("fake_probability", 50)
             if prob < 30:
@@ -132,11 +175,19 @@ with col_main:
                 if is_url:
                     st.error("❌ Mô hình TF-IDF Cổ điển chỉ hỗ trợ phân tích đoạn văn bản trực tiếp. Vui lòng copy nội dung bài báo dán vào đây, hoặc chuyển sang dùng Gemini AI để đọc Link!")
                 else:
-                    with st.spinner("⏳ Mô hình Học máy đang tính toán tần suất từ vựng (TF-IDF)..."):
-                        from src.models.text_ml_model import predict_text
-                        res = predict_text(input_text.strip())
+                    with st.spinner("⏳ Mô hình Trí tuệ Nhân tạo Ngôn ngữ (NLP) đang phân tích câu chữ..."):
+                        from src.text.nlp_processor import predict_text_fake_news
+                        fake_prob_nlp = predict_text_fake_news(input_text.strip())
+                        res = {
+                            "fake_probability": fake_prob_nlp,
+                            "reasons": [
+                                "Phân tích cú pháp và ngữ nghĩa bằng mô hình Machine Learning NLP (Ngoại tuyến).",
+                                "Văn bản có giọng điệu và từ khóa đặc trưng của tin giả (Clickbait/Fake News)." if fake_prob_nlp > 50 else "Nội dung văn bản khá trung lập và đáng tin cậy."
+                            ],
+                            "sentiment_score": 0.0
+                        }
                     
-                    display_results(res, "Bài Viết (Học máy)")
+                    display_results(res, "Bài Viết (Học máy)", is_offline=True)
                     
                     prob = res.get("fake_probability", 50)
                     if prob < 30:
@@ -148,7 +199,7 @@ with col_main:
                 with st.spinner(loading_text):
                     res, snippet = analyze_real_fake_news(input_text, is_url=is_url, custom_api_key=custom_api_key)
                 
-            display_results(res, "Đường dẫn URL" if is_url else "Văn Bản")
+            display_results(res, "Đường dẫn URL" if is_url else "Văn Bản", is_offline=False)
             
             prob = res.get("fake_probability", 50)
             if prob < 30:
